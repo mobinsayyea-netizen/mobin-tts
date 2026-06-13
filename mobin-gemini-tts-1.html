@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -19,8 +19,19 @@ textarea { height:140px; resize:none; }
 .btn-play { background:linear-gradient(135deg, #FF9933, #cc5500); color:white; }
 .btn-stop { background:#c0392b; color:white; display:none; }
 .btn-download { background:#138808; color:white; display:none; }
+.btn-more { background:#0f3460; color:#FF9933; border:1px solid #FF9933; }
+.btn-dev { background:#0f3460; color:#25D366; border:1px solid #25D366; }
+.btn-close { background:#333; color:#ccc; }
 .status { text-align:center; color:#aaa; font-size:13px; margin-top:10px; padding:12px; background:#0f3460; border-radius:10px; }
 .tribar { height:5px; border-radius:3px; background:linear-gradient(to right, #FF9933 33%, #fff 33%, #fff 66%, #138808 66%); margin-bottom:16px; }
+.modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:50; align-items:center; justify-content:center; }
+.modal-overlay.active { display:flex; }
+.modal-box { background:#16213e; border-radius:16px; padding:20px; width:90%; max-width:340px; border:1px solid #FF9933; }
+.modal-box h3 { color:#FF9933; margin-bottom:12px; font-size:16px; }
+.modal-actions { display:flex; gap:10px; margin-top:14px; }
+.modal-actions button { flex:1; padding:12px; border:none; border-radius:10px; font-weight:700; cursor:pointer; }
+.modal-save { background:#138808; color:white; }
+.modal-cancel { background:#444; color:#ccc; }
 </style>
 </head>
 <body>
@@ -32,17 +43,12 @@ textarea { height:140px; resize:none; }
 <div class="tribar"></div>
 
 <div class="card">
-  <span class="label">🔑 Gemini API Key</span>
-  <input type="password" id="apiKey" placeholder="API Key यहां डालो...">
+  <span class="label">📝 Enter Text</span>
+  <textarea id="textInput" placeholder="Type your text here..."></textarea>
 </div>
 
 <div class="card">
-  <span class="label">📝 Text लिखो</span>
-  <textarea id="textInput" placeholder="हिंदी, मराठी या English में लिखो...">नमस्ते! मेरा नाम मोबिन है। यह Gemini TTS का test है।</textarea>
-</div>
-
-<div class="card">
-  <span class="label">🎤 Voice चुनो</span>
+  <span class="label">🎤 Select Voice</span>
   <select id="voiceSelect">
     <option value="Zephyr">Zephyr — Smooth</option>
     <option value="Puck">Puck — Upbeat</option>
@@ -65,11 +71,49 @@ textarea { height:140px; resize:none; }
 <button class="btn btn-play" id="playBtn" onclick="generateTTS()">▶ Generate & Play</button>
 <button class="btn btn-stop" id="stopBtn" onclick="stopAudio()">⏹ Stop</button>
 <button class="btn btn-download" id="downloadBtn" onclick="downloadAudio()">⬇ Download Audio</button>
+<button class="btn btn-more" onclick="openApiModal()">⚙️ More Options (API Key)</button>
+<button class="btn btn-dev" onclick="openDeveloper()">💬 Developer Contact</button>
+<button class="btn btn-close" onclick="closeApp()">✖ Close</button>
 
-<div class="status" id="status">API Key डालो और Generate दबाओ 🎵</div>
+<div class="status" id="status">Please set your API Key in ⚙️ More Options</div>
+
+<div class="modal-overlay" id="apiModal">
+  <div class="modal-box">
+    <h3>🔑 Gemini API Key</h3>
+    <input type="password" id="apiKey" placeholder="Enter API Key here...">
+    <div class="modal-actions">
+      <button class="modal-save" onclick="saveApiKey()">Save</button>
+      <button class="modal-cancel" onclick="closeApiModal()">Cancel</button>
+    </div>
+  </div>
+</div>
 
 <script>
 let audioBlob = null;
+let currentAudio = null;
+
+function openApiModal() {
+  const saved = localStorage.getItem('mobin_gemini_key') || '';
+  document.getElementById('apiKey').value = saved;
+  document.getElementById('apiModal').classList.add('active');
+}
+function closeApiModal() {
+  document.getElementById('apiModal').classList.remove('active');
+}
+function saveApiKey() {
+  const key = document.getElementById('apiKey').value.trim();
+  if (!key) { setStatus('⚠️ Please enter a valid API Key'); return; }
+  localStorage.setItem('mobin_gemini_key', key);
+  closeApiModal();
+  setStatus('✅ API Key Saved Successfully');
+}
+function getApiKey() {
+  return localStorage.getItem('mobin_gemini_key') || '';
+}
+
+function openDeveloper() {
+  window.open('https://wa.me/917304545503', '_blank');
+}
 
 function createWavHeader(dataLength) {
   const sampleRate = 24000;
@@ -78,46 +122,40 @@ function createWavHeader(dataLength) {
   const byteRate = sampleRate * channels * bitsPerSample / 8;
   const blockAlign = channels * bitsPerSample / 8;
   const chunkSize = 36 + dataLength;
-
   const buffer = new ArrayBuffer(44);
   const view = new DataView(buffer);
-
-  // RIFF header
-  view.setUint8(0, 0x52); view.setUint8(1, 0x49); view.setUint8(2, 0x46); view.setUint8(3, 0x46); // "RIFF"
+  view.setUint8(0,0x52); view.setUint8(1,0x49); view.setUint8(2,0x46); view.setUint8(3,0x46);
   view.setUint32(4, chunkSize, true);
-  view.setUint8(8, 0x57); view.setUint8(9, 0x41); view.setUint8(10, 0x56); view.setUint8(11, 0x45); // "WAVE"
-  view.setUint8(12, 0x66); view.setUint8(13, 0x6D); view.setUint8(14, 0x74); view.setUint8(15, 0x20); // "fmt "
-  view.setUint32(16, 16, true); // PCM chunk size
-  view.setUint16(20, 1, true);  // PCM format
+  view.setUint8(8,0x57); view.setUint8(9,0x41); view.setUint8(10,0x56); view.setUint8(11,0x45);
+  view.setUint8(12,0x66); view.setUint8(13,0x6D); view.setUint8(14,0x74); view.setUint8(15,0x20);
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
   view.setUint16(22, channels, true);
   view.setUint32(24, sampleRate, true);
   view.setUint32(28, byteRate, true);
   view.setUint16(32, blockAlign, true);
   view.setUint16(34, bitsPerSample, true);
-  view.setUint8(36, 0x64); view.setUint8(37, 0x61); view.setUint8(38, 0x74); view.setUint8(39, 0x61); // "data"
+  view.setUint8(36,0x64); view.setUint8(37,0x61); view.setUint8(38,0x74); view.setUint8(39,0x61);
   view.setUint32(40, dataLength, true);
-
   return buffer;
 }
 
 function base64ToBytes(base64) {
   const binary = atob(base64);
   const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   return bytes;
 }
 
 async function generateTTS() {
-  const apiKey = document.getElementById('apiKey').value.trim();
+  const apiKey = getApiKey();
   const text = document.getElementById('textInput').value.trim();
   const voice = document.getElementById('voiceSelect').value;
 
-  if (!apiKey) { setStatus('⚠️ पहले API Key डालो!'); return; }
-  if (!text) { setStatus('⚠️ पहले text लिखो!'); return; }
+  if (!apiKey) { setStatus('⚠️ Please set your API Key in ⚙️ More Options first!'); return; }
+  if (!text) { setStatus('⚠️ Please enter some text first!'); return; }
 
-  setStatus('🔄 Generating... थोड़ा wait करो...');
+  setStatus('🔄 Generating... please wait...');
   document.getElementById('playBtn').disabled = true;
   document.getElementById('playBtn').textContent = '⏳ Loading...';
   document.getElementById('downloadBtn').style.display = 'none';
@@ -133,27 +171,17 @@ async function generateTTS() {
           contents: [{ role: "user", parts: [{ text: "Convert to speech: " + text }] }],
           generationConfig: {
             responseModalities: ["AUDIO"],
-            speechConfig: {
-              voiceConfig: {
-                prebuiltVoiceConfig: { voiceName: voice }
-              }
-            }
+            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } }
           }
         })
       }
     );
 
     const data = await response.json();
-
-    if (data.error) {
-      setStatus('❌ Error: ' + data.error.message);
-      resetBtn(); return;
-    }
+    if (data.error) { setStatus('❌ Error: ' + data.error.message); resetBtn(); return; }
 
     const audioBase64 = data.candidates[0].content.parts[0].inlineData.data;
     const audioBytes = base64ToBytes(audioBase64);
-
-    // WAV header बनाओ — Lua code जैसा
     const wavHeader = createWavHeader(audioBytes.length);
     const wavArray = new Uint8Array(wavHeader.byteLength + audioBytes.length);
     wavArray.set(new Uint8Array(wavHeader), 0);
@@ -161,32 +189,28 @@ async function generateTTS() {
 
     audioBlob = new Blob([wavArray], { type: 'audio/wav' });
     const url = URL.createObjectURL(audioBlob);
-
-    // Play
-    const audio = new Audio(url);
-    audio.play();
+    currentAudio = new Audio(url);
+    currentAudio.play();
 
     document.getElementById('stopBtn').style.display = 'block';
     document.getElementById('downloadBtn').style.display = 'block';
     setStatus('🎵 Playing — Voice: ' + voice);
     resetBtn();
 
-    document.getElementById('stopBtn').onclick = () => {
-      audio.pause();
-      audio.currentTime = 0;
-      document.getElementById('stopBtn').style.display = 'none';
-      setStatus('⏹ Stopped');
-    };
-
-    audio.onended = () => {
-      setStatus('✅ Done! Download कर सकते हो।');
+    currentAudio.onended = () => {
+      setStatus('✅ Done! You can download the audio.');
       document.getElementById('stopBtn').style.display = 'none';
     };
-
   } catch(e) {
     setStatus('❌ Error: ' + e.message);
     resetBtn();
   }
+}
+
+function stopAudio() {
+  if (currentAudio) { currentAudio.pause(); currentAudio.currentTime = 0; }
+  document.getElementById('stopBtn').style.display = 'none';
+  setStatus('⏹ Stopped');
 }
 
 function downloadAudio() {
@@ -197,11 +221,20 @@ function downloadAudio() {
   a.click();
 }
 
+function closeApp() {
+  if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+  document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;color:#FF9933;font-size:20px;text-align:center;">App Closed 👋<br><br><span style="font-size:14px;color:#aaa;">Close or refresh this tab to reopen</span></div>';
+}
+
 function setStatus(msg) { document.getElementById('status').textContent = msg; }
 function resetBtn() {
   document.getElementById('playBtn').disabled = false;
   document.getElementById('playBtn').textContent = '▶ Generate & Play';
 }
+
+window.onload = () => {
+  if (getApiKey()) setStatus('✅ API Key is saved — Enter text and tap Generate 🎵');
+};
 </script>
 </body>
 </html>
