@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mobin Gemini TTS</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#1a1a2e; font-family:sans-serif; min-height:100vh; padding:16px; }
+.header { background:linear-gradient(135deg, #FF9933, #cc5500); border-radius:16px; padding:20px; text-align:center; margin-bottom:16px; }
+.header h1 { color:white; font-size:22px; }
+.header p { color:rgba(255,255,255,0.8); font-size:13px; margin-top:4px; }
+.card { background:#16213e; border-radius:16px; padding:16px; margin-bottom:12px; }
+.label { color:#FF9933; font-size:13px; font-weight:700; margin-bottom:8px; display:block; }
+textarea, select { width:100%; padding:12px; background:#0f3460; color:white; border:1px solid #333; border-radius:10px; font-size:14px; outline:none; }
+textarea:focus { border-color:#FF9933; }
+textarea { height:140px; resize:none; }
+.btn { width:100%; padding:16px; border:none; border-radius:14px; font-size:16px; font-weight:700; cursor:pointer; margin-top:8px; }
+.btn-play { background:linear-gradient(135deg, #FF9933, #cc5500); color:white; }
+.btn-stop { background:#c0392b; color:white; display:none; }
+.btn-download { background:#138808; color:white; display:none; }
+.btn-more { background:#0f3460; color:#FF9933; border:1px solid #FF9933; }
+.btn-dev { background:#0f3460; color:#25D366; border:2px solid #25D366; }
+.btn-close { background:#333; color:#ccc; }
+.status { text-align:center; color:#aaa; font-size:13px; margin-top:10px; padding:12px; background:#0f3460; border-radius:10px; }
+.tribar { height:5px; border-radius:3px; background:linear-gradient(to right, #FF9933 33%, #fff 33%, #fff 66%, #138808 66%); margin-bottom:16px; }
+.modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:50; align-items:center; justify-content:center; }
+.modal-overlay.active { display:flex; }
+.modal-box { background:#16213e; border-radius:16px; padding:20px; width:90%; max-width:340px; border:1px solid #FF9933; }
+.modal-box h3 { color:#FF9933; margin-bottom:12px; font-size:16px; }
+input[type="password"] { width:100%; padding:12px; background:#0f3460; color:white; border:1px solid #333; border-radius:10px; font-size:14px; outline:none; }
+.modal-actions { display:flex; gap:10px; margin-top:14px; }
+.modal-actions button { flex:1; padding:12px; border:none; border-radius:10px; font-weight:700; cursor:pointer; }
+.modal-save { background:#138808; color:white; }
+.modal-cancel { background:#444; color:#ccc; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🎙️ Mobin Gemini TTS</h1>
+  <p>Text to Speech — Google Gemini</p>
+</div>
+<div class="tribar"></div>
+
+<div class="card">
+  <span class="label">📝 Enter Text</span>
+  <textarea id="textInput" placeholder="Type your text here..."></textarea>
+</div>
+
+<div class="card">
+  <span class="label">🎤 Select Voice</span>
+  <select id="voiceSelect">
+    <option value="Zephyr">Zephyr — Smooth</option>
+    <option value="Puck">Puck — Upbeat</option>
+    <option value="Charon">Charon — Deep</option>
+    <option value="Kore">Kore — Firm</option>
+    <option value="Fenrir">Fenrir — Excitable</option>
+    <option value="Leda">Leda — Youthful</option>
+    <option value="Orus">Orus — Confident</option>
+    <option value="Aoede">Aoede — Breezy</option>
+    <option value="Callirrhoe">Callirrhoe — Easy-going</option>
+    <option value="Autonoe">Autonoe — Bright</option>
+    <option value="Enceladus">Enceladus — Breathy</option>
+    <option value="Iapetus">Iapetus — Clear</option>
+    <option value="Umbriel">Umbriel — Easy-going</option>
+    <option value="Algieba">Algieba — Smooth</option>
+    <option value="Despina">Despina — Smooth</option>
+    <option value="Erinome">Erinome — Clear</option>
+    <option value="Algenib">Algenib — Gravelly</option>
+    <option value="Rasalgethi">Rasalgethi — Informative</option>
+    <option value="Laomedeia">Laomedeia — Upbeat</option>
+    <option value="Achernar">Achernar — Soft</option>
+    <option value="Alnilam">Alnilam — Firm</option>
+    <option value="Schedar">Schedar — Even</option>
+    <option value="Gacrux">Gacrux — Mature</option>
+    <option value="Pulcherrima">Pulcherrima — Forward</option>
+    <option value="Achird">Achird — Friendly</option>
+    <option value="Zubenelgenubi">Zubenelgenubi — Casual</option>
+    <option value="Vindemiatrix">Vindemiatrix — Gentle</option>
+    <option value="Sadachbia">Sadachbia — Lively</option>
+    <option value="Sadaltager">Sadaltager — Knowledgeable</option>
+    <option value="Sulafat">Sulafat — Warm</option>
+  </select>
+</div>
+
+<button class="btn btn-play" id="playBtn" onclick="generateTTS()">▶ Generate & Play</button>
+<button class="btn btn-stop" id="stopBtn" onclick="stopAudio()">⏹ Stop</button>
+<button class="btn btn-download" id="downloadBtn" onclick="downloadAudio()">⬇ Download Audio</button>
+<button class="btn btn-more" onclick="openApiModal()">⚙️ More Options (API Key)</button>
+<button class="btn btn-dev" onclick="openDeveloper()">💬 Developer Contact</button>
+<button class="btn btn-close" onclick="closeApp()">✖ Close</button>
+
+<div class="status" id="status">Please set your API Key in ⚙️ More Options</div>
+
+<div class="modal-overlay" id="apiModal">
+  <div class="modal-box">
+    <h3>🔑 Gemini API Key</h3>
+    <input type="password" id="apiKey" placeholder="Enter API Key here...">
+    <div class="modal-actions">
+      <button class="modal-save" onclick="saveApiKey()">Save</button>
+      <button class="modal-cancel" onclick="closeApiModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let audioBlob = null;
+let currentAudio = null;
+
+function openApiModal() {
+  const saved = localStorage.getItem('mobin_gemini_key') || '';
+  document.getElementById('apiKey').value = saved;
+  document.getElementById('apiModal').classList.add('active');
+}
+function closeApiModal() {
+  document.getElementById('apiModal').classList.remove('active');
+}
+function saveApiKey() {
+  const key = document.getElementById('apiKey').value.trim();
+  if (!key) { setStatus('⚠️ Please enter a valid API Key'); return; }
+  localStorage.setItem('mobin_gemini_key', key);
+  closeApiModal();
+  setStatus('✅ API Key Saved Successfully');
+}
+function getApiKey() {
+  return localStorage.getItem('mobin_gemini_key') || '';
+}
+
+function openDeveloper() {
+  window.open('https://wa.me/917304545503', '_blank');
+}
+
+function createWavHeader(dataLength) {
+  const sampleRate = 24000;
+  const channels = 1;
+  const bitsPerSample = 16;
+  const byteRate = sampleRate * channels * bitsPerSample / 8;
+  const blockAlign = channels * bitsPerSample / 8;
+  const chunkSize = 36 + dataLength;
+  const buffer = new ArrayBuffer(44);
+  const view = new DataView(buffer);
+  view.setUint8(0,0x52); view.setUint8(1,0x49); view.setUint8(2,0x46); view.setUint8(3,0x46);
+  view.setUint32(4, chunkSize, true);
+  view.setUint8(8,0x57); view.setUint8(9,0x41); view.setUint8(10,0x56); view.setUint8(11,0x45);
+  view.setUint8(12,0x66); view.setUint8(13,0x6D); view.setUint8(14,0x74); view.setUint8(15,0x20);
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, channels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, byteRate, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, bitsPerSample, true);
+  view.setUint8(36,0x64); view.setUint8(37,0x61); view.setUint8(38,0x74); view.setUint8(39,0x61);
+  view.setUint32(40, dataLength, true);
+  return buffer;
+}
+
+function base64ToBytes(base64) {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+async function generateTTS() {
+  const apiKey = getApiKey();
+  const text = document.getElementById('textInput').value.trim();
+  const voice = document.getElementById('voiceSelect').value;
+
+  if (!apiKey) { setStatus('⚠️ Please set your API Key in ⚙️ More Options first!'); return; }
+  if (!text) { setStatus('⚠️ Please enter some text first!'); return; }
+
+  setStatus('🔄 Generating... please wait...');
+  document.getElementById('playBtn').disabled = true;
+  document.getElementById('playBtn').textContent = '⏳ Loading...';
+  document.getElementById('downloadBtn').style.display = 'none';
+  document.getElementById('stopBtn').style.display = 'none';
+
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: "Convert to speech: " + text }] }],
+          generationConfig: {
+            responseModalities: ["AUDIO"],
+            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } }
+          }
+        })
+      }
+    );
+
+    const data = await response.json();
+    if (data.error) { setStatus('❌ Error: ' + data.error.message); resetBtn(); return; }
+
+    const audioBase64 = data.candidates[0].content.parts[0].inlineData.data;
+    const audioBytes = base64ToBytes(audioBase64);
+    const wavHeader = createWavHeader(audioBytes.length);
+    const wavArray = new Uint8Array(wavHeader.byteLength + audioBytes.length);
+    wavArray.set(new Uint8Array(wavHeader), 0);
+    wavArray.set(audioBytes, wavHeader.byteLength);
+
+    audioBlob = new Blob([wavArray], { type: 'audio/wav' });
+    const url = URL.createObjectURL(audioBlob);
+    currentAudio = new Audio(url);
+    currentAudio.play();
+
+    document.getElementById('stopBtn').style.display = 'block';
+    document.getElementById('downloadBtn').style.display = 'block';
+    setStatus('🎵 Playing — Voice: ' + voice);
+    resetBtn();
+
+    document.getElementById('stopBtn').onclick = () => {
+      currentAudio.pause();
+      currentAudio.currentTime = 0;
+      document.getElementById('stopBtn').style.display = 'none';
+      setStatus('⏹ Stopped');
+    };
+
+    currentAudio.onended = () => {
+      setStatus('✅ Done! You can download the audio.');
+      document.getElementById('stopBtn').style.display = 'none';
+    };
+  } catch(e) {
+    setStatus('❌ Error: ' + e.message);
+    resetBtn();
+  }
+}
+
+function stopAudio() {
+  if (currentAudio) { currentAudio.pause(); currentAudio.currentTime = 0; }
+  document.getElementById('stopBtn').style.display = 'none';
+  setStatus('⏹ Stopped');
+}
+
+function downloadAudio() {
+  if (!audioBlob) return;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(audioBlob);
+  a.download = 'mobin-tts.wav';
+  a.click();
+}
+
+function closeApp() {
+  if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+  document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;color:#FF9933;font-size:20px;text-align:center;">App Closed 👋<br><br><span style="font-size:14px;color:#aaa;">Close or refresh this tab to reopen</span></div>';
+}
+
+function setStatus(msg) { document.getElementById('status').textContent = msg; }
+function resetBtn() {
+  document.getElementById('playBtn').disabled = false;
+  document.getElementById('playBtn').textContent = '▶ Generate & Play';
+}
+
+window.onload = () => {
+  if (getApiKey()) setStatus('✅ API Key is saved — Enter text and tap Generate 🎵');
+};
+</script>
+</body>
+</html>
